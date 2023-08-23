@@ -16,3 +16,60 @@ def handle_hello():
     }
 
     return jsonify(response_body), 200
+
+
+@api.route('/users', methods=['GET', 'POST'])
+def handle_users():
+    
+    if request.method == 'GET':
+        # Metodo de SQLAlquemy que permite guardar en user todos los usuarios que tengo (reemplaza el query.all)
+        users = db.session.execute(db.select(User).order_by(User.name)).scalars()
+        # Obtengo todos los datos que estan en el serialize
+        result = [user.serialize() for user in users]
+        response_body = {'results': result,
+                          'status': 'ok'}
+        return response_body, 200
+    
+    if request.method == 'POST':
+        request_body = request.get_json()
+        user = User(email = request_body['email'], password= request_body['password'], name= request_body['name'], phone= request_body['phone'])
+
+        db.session.add(user)
+        db.session.commit()
+        
+        print(request_body)
+        
+        response_body = { 'message': 'Se agrego exitosamente',
+                          'new user': request_body}
+       
+        return response_body, 200
+
+
+@api.route('/users/<int:id>', methods=['GET', 'PUT', 'DELETE'])
+def handle_user_id(id):
+    if request.method == 'GET':
+        user = db.get_or_404(User, id)
+        response_body= {'resultado': user.serialize()}
+        return response_body
+
+    if request.method == 'PUT':
+        request_body = request.get_json()
+        user = db.get_or_404(User, id)
+        user.email = request_body['email']
+        user.password = request_body['password']
+        user.name = request_body['name']
+        user.phone = request_body['phone']
+
+        db.session.commit()
+
+        response_body ={'message': 'Updating user', 'status': 'ok', 'result': request_body}
+        return response_body, 200
+
+    if request.method == 'DELETE':
+
+        user = db.get_or_404(User, id)
+        db.session.delete(user)
+        db.session.commit()
+
+        response_body ={'message': 'Deleting user', 'status': 'ok', 'user deleting': id}
+        return response_body
